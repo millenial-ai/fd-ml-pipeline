@@ -1,0 +1,22 @@
+{
+    "feature_list": "amt,lat,long,city_pop,merch_lat,merch_long",
+    "input_data": "s3://fd-ml-pipeline/input_data",
+    
+    "feature_selection_data": "s3://fd-ml-pipeline/preprocessed_data/feature_selection",
+    "features": "amt,lat,long,city_pop,merch_lat,merch_long",
+    "std_scaling_data": "s3://fd-ml-pipeline/preprocessed_data/std_scaling",
+    "splitting_data": "s3://fd-ml-pipeline/preprocessed_data/splitting",
+    
+    "train_instance_type": "ml.t3.medium",
+    "train_instance_count": 1,
+    
+    "processing_instance_count": 1,
+    "processing_instance_type": "ml.t3.medium",
+    
+    "scalers": "StandardScaler[amt,lat,long,city_pop,merch_lat,merch_long]",
+    
+    "evaluation_metric_name": "accuracy",
+    "evaluation_metric_value": 0.8,
+    
+    "endpoint_instance_type": "ml.t3.medium"
+}
