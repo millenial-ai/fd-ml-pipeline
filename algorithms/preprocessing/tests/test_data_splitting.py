@@ -31,8 +31,10 @@ def test_data_splitting(
     for input_file in glob.glob(f"{input_path}/*.csv"):
         original_data = pd.read_csv(input_file)
         
-        train_output_file = os.path.join(output_path, "train_" + os.path.basename(input_file))
-        val_output_file = os.path.join(output_path, "val_" + os.path.basename(input_file))
+        train_output_file = os.path.join(output_path, "train/" + os.path.basename(input_file))
+        val_output_file = os.path.join(output_path, "val/" + os.path.basename(input_file))
+        logging.info(output_path)
+        logging.info(train_output_file)
         assert os.path.exists(train_output_file), f"Train file exists in output dir"
         assert os.path.exists(val_output_file), f"Val file exists in output dir"
         

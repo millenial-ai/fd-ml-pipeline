@@ -1,13 +1,15 @@
 {
+    "execution_role": "arn:aws:iam::348490654799:role/service-role/AmazonSageMaker-ExecutionRole-20230705T105457",
     "feature_list": "amt,lat,long,city_pop,merch_lat,merch_long",
     "input_data": "s3://fd-ml-pipeline/input_data",
     
-    "feature_selection_data": "s3://fd-ml-pipeline/preprocessed_data/feature_selection",
+    "bucket_name": "s3://fd-ml-pipeline",
     "features": "amt,lat,long,city_pop,merch_lat,merch_long",
-    "std_scaling_data": "s3://fd-ml-pipeline/preprocessed_data/std_scaling",
-    "splitting_data": "s3://fd-ml-pipeline/preprocessed_data/splitting",
+    "label": "is_fraud",
+    "splitting_ratio": 0.2,
     
-    "train_instance_type": "ml.t3.medium",
+    
+    "train_instance_type": "ml.m5.xlarge",
     "train_instance_count": 1,
     
     "processing_instance_count": 1,
@@ -18,5 +20,8 @@
     "evaluation_metric_name": "accuracy",
     "evaluation_metric_value": 0.8,
     
-    "endpoint_instance_type": "ml.t3.medium"
+    "endpoint_instance_type": "ml.t3.medium",
+    
+    "rcf_model_package_group_name": "rcf",
+    "xgb_model_package_group_name": "xgb"
 }

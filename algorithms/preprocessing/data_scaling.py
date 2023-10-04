@@ -82,7 +82,7 @@ def scale_data(
         # Read the data from S3
         data = pd.read_csv(input_file)
         
-        transformed_data = pd.DataFrame()
+        transformed_data = pd.DataFrame(data)
 
         for key in scalers:
             logging.info(key)
