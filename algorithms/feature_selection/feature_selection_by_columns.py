@@ -17,9 +17,12 @@ def select_features_by_columns(input_path, output_path, selected_features=[], se
         
         # Read the data from S3
         data = pd.read_csv(input_file)
+        logging.info(data.columns)
         
-        selected_columns = selected_features 
-        selected_columns += [selected_label]
+        selected_columns = [] 
+        if str(selected_label) != "None":
+            selected_columns.append(selected_label)
+        selected_columns += selected_features 
         # Select the desired features
         selected_data = data[selected_columns]
     

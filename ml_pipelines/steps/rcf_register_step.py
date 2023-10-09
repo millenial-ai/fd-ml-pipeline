@@ -4,9 +4,12 @@ from sagemaker import image_uris
 from sagemaker.workflow.parameters import ParameterString
 
 def get_rcf_register_step(
-    parameters, 
+    parameters,
     sagemaker_session,
+    role,
     model_data,
+    model_approval_status,
+    model_package_group_name,
     step_name="RCF_ModelRegistration",
 ):
     model = Model(
@@ -15,14 +18,9 @@ def get_rcf_register_step(
                                 version="1"),
         model_data=model_data,
         sagemaker_session=sagemaker_session,
-        role=parameters.get("execution_role"),
+        role=role,
     )
     
-    model_package_group_name = parameters.get("rcf_model_package_group_name")
-    model_approval_status = ParameterString(
-        name="ModelApprovalStatus",
-        default_value="PendingManualApproval"
-    )
     register_args = model.register(
         content_types=["text/csv"],
         response_types=["text/csv"],

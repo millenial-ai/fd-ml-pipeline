@@ -27,6 +27,7 @@ def test_data_scaling(
     output_path = os.path.join(tmp_path)
     scaler_str = f"StandardScaler[{','.join(numerical_columns)}]"
     
+    logging.info(f"Scaling data {input_path} -> {output_path}: {parse_scalers_from_str(scaler_str)}")
     scale_data(input_path, output_path, parse_scalers_from_str(scaler_str))
     
     for input_file in glob.glob(f"{input_path}/*.csv"):

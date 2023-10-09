@@ -60,7 +60,7 @@ def parse_scalers_from_str(scaler_str: str) -> dict:
             'class': scaler_class,
             'columns': columns
         }
-
+    logging.info(f"Parse scaler returns {scaler_mapping}")
     return scaler_mapping
     
 
@@ -74,7 +74,10 @@ def scale_data(
         output_path: str, 
         scalers={}
     ):
+    logging.info(f"Scale data {input_path} -> {output_path}")
+    logging.info(f"Processing {glob.glob(f'{input_path}/*.csv')}")
     for input_file in glob.glob(f"{input_path}/*.csv"):
+        logging.info(f"Scaling input file {input_file}")
         output_file = os.path.join(output_path, os.path.basename(input_file))
         
         logging.info(f"Processing {input_file} -> {output_file}")

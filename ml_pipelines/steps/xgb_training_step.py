@@ -6,20 +6,24 @@ from sagemaker.workflow.steps import TrainingStep
 from sagemaker import image_uris
 
 
-def get_rcf_training_step(
+def get_xgb_training_step(
     parameters, 
-    sagemaker_session, 
-    s3_data
+    sagemaker_session,
+    role,
+    s3_data,
+    train_instance_count,
+    train_instance_type,
+    step_name="RCF_TrainModel"
 ):
     container = image_uris.retrieve(region=sagemaker_session.boto_region_name, 
                                 framework="randomcutforest", 
                                 version="1")
     rcf = sagemaker.estimator.Estimator(
         container,
-        parameters.get("execution_role"),
+        role,
         output_path=parameters.get("train_artifact_path"),
-        instance_count=parameters.get("train_instance_count"),
-        instance_type=parameters.get("train_instance_type"),
+        instance_count=train_instance_count,
+        instance_type=train_instance_type,
         sagemaker_session=sagemaker_session,
     )
     
@@ -35,8 +39,7 @@ def get_rcf_training_step(
             )
         },
     )
-    step_train = TrainingStep(
-        name="TrainModel",
+    return TrainingStep(
+        name=step_name,
         step_args=train_step_args,
     )
-    return step_train

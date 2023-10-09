@@ -18,5 +18,5 @@
     
     "endpoint_instance_type": "ml.t3.medium",
     
-    "model_package_group_name": "rcf"
+    "model_package_group_name": "xgb"
 }

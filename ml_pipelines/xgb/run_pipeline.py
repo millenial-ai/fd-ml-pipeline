@@ -5,6 +5,8 @@ from sagemaker.workflow.step_collections import RegisterModel
 from sagemaker.workflow.pipeline import Pipeline
 from sagemaker.workflow.pipeline_context import LocalPipelineSession
 from sagemaker.workflow.parameters import ParameterInteger, ParameterFloat, ParameterString
+from sagemaker.estimator import Estimator
+from sagemaker.model import Model
 import json
 import sys
 import os
@@ -22,12 +24,14 @@ sys.path.insert(0, file_dir)
 sys.path.insert(0, PREFIX)
 
 def calculate_parameters(parameters):
-    prefix = os.path.join(parameters.get("bucket_name"), "rcf", parameters.get("pipeline_name"))
+    prefix = os.path.join(parameters.get("bucket_name"), "xgb", parameters.get("pipeline_name"))
     parameters["feature_selection_data"] = os.path.join(prefix, "preprocessed_data", "feature_selection")
     parameters["std_scaling_data"] = os.path.join(prefix, "preprocessed_data", "std_scaling")
-    parameters["rcf_splitting_data_train"] = os.path.join(prefix, "preprocessed_data/splitting", "train")
-    parameters["rcf_splitting_data_val"] = os.path.join(prefix, "preprocessed_data/splitting", "val")
-    parameters["train_artifact_path"] = os.path.join(prefix, "training", "artifact")
+    # parameters["rcf_splitting_data_train"] = os.path.join(prefix, "preprocessed_data/splitting/rcf", "train")
+    # parameters["rcf_splitting_data_val"] = os.path.join(prefix, "preprocessed_data/splitting/rcf", "val")
+    parameters["xgb_splitting_data_train"] = os.path.join(prefix, "preprocessed_data/splitting", "train")
+    parameters["xgb_splitting_data_val"] = os.path.join(prefix, "preprocessed_data/splitting", "val")
+    # parameters["train_artifact_path"] = os.path.join(prefix, "training", "artifact")
 
 
 def main(args):
@@ -56,8 +60,9 @@ def main(args):
     
     std_scaling_data = ParameterString(name="StdScalingData", default_value=parameters.get("std_scaling_data"))
     scalers = ParameterString(name="Scalers", default_value=parameters.get("scalers"))
-    rcf_splitting_data_train = ParameterString(name="RCFSplittingDataTrain", default_value=parameters.get("rcf_splitting_data_train"))
-    rcf_splitting_data_val = ParameterString(name="RCFSplittingDataVal", default_value=parameters.get("rcf_splitting_data_val"))
+    
+    xgb_splitting_data_train = ParameterString(name="XGBSplittingDataTrain", default_value=parameters.get("xgb_splitting_data_train"))
+    xgb_splitting_data_val = ParameterString(name="XGBSplittingDataVal", default_value=parameters.get("xgb_splitting_data_val"))
     
     feature_list = ParameterString(name="FeatureList", default_value=parameters.get("feature_list"))
     label = ParameterString(name="Label", default_value=parameters.get("label"))
@@ -98,7 +103,8 @@ def main(args):
         label=label,
         processing_instance_type=processing_instance_type,
         processing_instance_count=processing_instance_count,
-        role=role
+        role=role,
+        step_name="XGB_FeatureSelection"
     )
     
     data_scaling_step = get_data_scaling_step(
@@ -123,10 +129,11 @@ def main(args):
         instance_type=processing_instance_type,
         instance_count=processing_instance_count,
         execution_role=role,
-        scalers=scalers
+        scalers=scalers,
+        step_name="XGB_FeatureScaling"
     )
     
-    rcf_data_splitting_step = get_rcf_data_splitting_step(
+    xgb_data_splitting_step = get_xgb_data_splitting_step(
         parameters,
         sagemaker_session,
         role=role,
@@ -142,53 +149,84 @@ def main(args):
                 output_name="data-splitting-output-train",
                 source="/opt/ml/processing/output/train",
                 s3_upload_mode="EndOfJob",
-                destination=parameters.get("rcf_splitting_data_train")
+                destination=parameters.get("xgb_splitting_data_train")
             ),
             ProcessingOutput(
                 output_name="data-splitting-output-val",
                 source="/opt/ml/processing/output/val",
                 s3_upload_mode="EndOfJob",
-                destination=parameters.get("rcf_splitting_data_val")
+                destination=parameters.get("xgb_splitting_data_val")
             ),
         ],
         processing_instance_type=processing_instance_type,
         processing_instance_count=processing_instance_count,
         splitting_ratio=splitting_ratio,
-        label_to_drop=label
+        label_to_drop=None
     )
     
-    rcf_training_step = get_rcf_training_step(
-        parameters, 
-        sagemaker_session,
+    from sagemaker import image_uris
+    # Define an XGBoost estimator
+    xgboost_estimator = Estimator(
         role=role,
-        s3_data=rcf_data_splitting_step.properties.ProcessingOutputConfig.Outputs["data-splitting-output-train"].S3Output.S3Uri,
-        train_instance_count=train_instance_count,
-        train_instance_type=train_instance_type
+        instance_count=1,
+        instance_type="ml.m4.xlarge",
+        image_uri=image_uris.retrieve(region=sagemaker_session.boto_region_name, 
+                                framework="xgboost", 
+                                version="1.0-1"),
+        output_path=parameters.get("train_artifact_path"),
+        hyperparameters={"objective": "reg:squarederror", "num_round": 100},
+        sagemaker_session=sagemaker_session,
     )
     
-    rcf_register_step = get_rcf_register_step(
-        parameters,
-        sagemaker_session,
+    # Define the training step
+    xgb_training_step = TrainingStep(
+        name="XGBoostTrainingStep",
+        estimator=xgboost_estimator,
+        inputs={
+            "train": sagemaker.inputs.TrainingInput(
+                xgb_data_splitting_step.properties.ProcessingOutputConfig.Outputs["data-splitting-output-train"].S3Output.S3Uri, 
+                content_type="text/csv",
+                distribution="ShardedByS3Key",
+            ),
+            "validation": sagemaker.inputs.TrainingInput(
+                xgb_data_splitting_step.properties.ProcessingOutputConfig.Outputs["data-splitting-output-val"].S3Output.S3Uri, 
+                content_type="text/csv",
+            )
+        },
+        # outputs=[sagemaker.outputs.TrainingOutput(parameters.get("train_artifact_path"), s3_upload_mode="EndOfJob")],
+    )
+    
+    # Define the model registration step
+    model = Model(
+        image_uri=xgboost_estimator.image_uri,
         role=role,
-        model_data=rcf_training_step.properties.ModelArtifacts.S3ModelArtifacts,
-        model_approval_status="PendingManualApproval",
-        model_package_group_name="rcf"
+        model_data=xgb_training_step.properties.ModelArtifacts.S3ModelArtifacts,
+    )
+    # import IPython ; IPython.embed()
+    
+    xgb_register_step = RegisterModel(
+        name="XGBoostModelStep",
+        content_types=["text/csv"],
+        response_types=["text/csv"],
+        estimator=xgboost_estimator,
+        model=model,
+        approval_status="PendingManualApproval",
+        model_package_group_name="xgb",
     )
     
     # Define the pipeline
-    pipeline_name = "fd-pipeline-rcf"
+    pipeline_name = "fd-pipeline-xgb"
     pipeline_steps = [
         feature_selection_step,
         data_scaling_step,
-        rcf_data_splitting_step
+        xgb_data_splitting_step
     ] if args.local else [
         feature_selection_step,
         data_scaling_step,
-        rcf_data_splitting_step,
-        rcf_training_step,
-        rcf_register_step,
+        xgb_data_splitting_step,
+        xgb_training_step,
+        xgb_register_step,
     ]
-    
     pipeline = Pipeline(
         name=pipeline_name,
         parameters=[
