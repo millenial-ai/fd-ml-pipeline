@@ -94,11 +94,16 @@ def scale_data(
             logging.info(f"Scaler {scaler_class}: {columns}")
             for column in columns:
                 scaler = scaler_class()
-                logging.info(f"Scaling column {column}")
+                logging.info(f"Applying scaler {key} to column {column}")
                 scaled_data = scaler.fit_transform(np.array(data[column])[:, np.newaxis])
                 logging.info(data[column].shape)
+                logging.info(transformed_data[column].shape)
                 logging.info(scaled_data.shape)
-                transformed_data[column] = scaled_data[:,0]
+                if len(scaled_data.shape) == 1:
+                    transformed_data[column] = scaled_data[:]
+                else:
+                    transformed_data[column] = scaled_data[:,0]
+                
         
         logging.info("Saving transformed data")
         # Save the selected data
@@ -110,7 +115,7 @@ if __name__ == "__main__":
     parser.add_argument("--output-data", type=str, required=True, help="S3 URI for output data")
     parser.add_argument("--scalers", type=str, help="""
         List of scalers and their respective colunns. The format is 
-        Example: 'sklearn.preprocessing.StandardScaler[col1,col2] sklearn.preprocessing.LabelEncoder[col3,col4]'
+        Example: 'StandardScaler[col1,col2] LabelEncoder[col3,col4]'
     """)
     args = parser.parse_args()
     

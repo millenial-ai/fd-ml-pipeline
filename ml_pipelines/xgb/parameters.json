@@ -3,7 +3,7 @@
     "bucket_name": "s3://fd-ml-pipeline",
     
     "input_data": "s3://fd-ml-pipeline/input_data",
-    "feature_list": "amt,lat,long,city_pop,merch_lat,merch_long",
+    "feature_list": "amt,lat,long,city_pop,merch_lat,merch_long,merchant,category,city,state,job,age,part_of_day",
     "label": "is_fraud",
     
     "splitting_ratio": 0.2,
@@ -14,7 +14,7 @@
     "processing_instance_count": 1,
     "processing_instance_type": "ml.t3.medium",
     
-    "scalers": "StandardScaler[amt,lat,long,city_pop,merch_lat,merch_long]",
+    "scalers": "StandardScaler[amt,lat,long,city_pop,merch_lat,merch_long,age] LabelEncoder[merchant,category,city,state,job,part_of_day]",
     
     "endpoint_instance_type": "ml.t3.medium",
     

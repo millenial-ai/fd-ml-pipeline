@@ -27,6 +27,7 @@ sys.path.insert(0, PREFIX)
 def calculate_parameters(parameters):
     prefix = os.path.join(parameters.get("bucket_name"), "xgb", parameters.get("pipeline_name"))
     parameters["feature_selection_data"] = os.path.join(prefix, "preprocessed_data", "feature_selection")
+    parameters["feature_aggregation_data"] = os.path.join(prefix, "preprocessed_data", "feature_aggregation")
     parameters["std_scaling_data"] = os.path.join(prefix, "preprocessed_data", "std_scaling")
     parameters["xgb_splitting_data_train"] = os.path.join(prefix, "preprocessed_data/splitting", "train")
     parameters["xgb_splitting_data_val"] = os.path.join(prefix, "preprocessed_data/splitting", "val")
@@ -81,7 +82,33 @@ def main(args):
         default_value="PendingManualApproval"
     )
     
-    from steps import get_feature_selection_step, get_data_scaling_step, get_rcf_data_splitting_step, get_xgb_data_splitting_step, get_rcf_training_step, get_xgb_evaluation_step, get_rcf_register_step
+    from steps import get_feature_selection_step, get_feature_aggregation_step, get_data_scaling_step, get_rcf_data_splitting_step, get_xgb_data_splitting_step, get_rcf_training_step, get_xgb_evaluation_step, get_rcf_register_step
+    
+    feature_aggregation_step = get_feature_aggregation_step(
+        parameters,
+        sagemaker_session,
+        step_inputs=[
+            ProcessingInput(
+                input_name="feature-aggregation-input",
+                source=input_data,
+                destination="/opt/ml/processing/input",
+                s3_data_distribution_type="FullyReplicated",
+            )
+        ],
+        step_outputs=[
+            ProcessingOutput(
+                output_name="feature-aggregation-output",
+                source="/opt/ml/processing/output",
+                s3_upload_mode="EndOfJob",
+                destination=parameters.get("feature_aggregation_data"),
+            )
+        ],
+        processing_instance_type=processing_instance_type,
+        processing_instance_count=processing_instance_count,
+        role=role,
+        cache_config=cache_config,
+        step_name="XGB_FeatureAggregation"
+    )
     
     feature_selection_step = get_feature_selection_step(
         parameters,
@@ -89,7 +116,7 @@ def main(args):
         step_inputs=[
             ProcessingInput(
                 input_name="feature-selection-input",
-                source=input_data,
+                source=feature_aggregation_step.properties.ProcessingOutputConfig.Outputs["feature-aggregation-output"].S3Output.S3Uri,
                 destination="/opt/ml/processing/input",
                 s3_data_distribution_type="FullyReplicated",
             )
@@ -251,10 +278,12 @@ def main(args):
     # Define the pipeline
     pipeline_name = "fd-pipeline-xgb"
     pipeline_steps = [
+        feature_aggregation_step,
         feature_selection_step,
         data_scaling_step,
         xgb_data_splitting_step
     ] if args.local else [
+        feature_aggregation_step,
         feature_selection_step,
         data_scaling_step,
         xgb_data_splitting_step,
