@@ -73,7 +73,7 @@ def main(args):
         default_value="PendingManualApproval"
     )
     
-    from steps import get_feature_selection_step, get_data_scaling_step, get_rcf_data_splitting_step, get_xgb_data_splitting_step, get_rcf_training_step, get_rcf_register_step
+    from steps import get_feature_selection_step, get_data_scaling_step, get_rcf_data_splitting_step, get_xgb_data_splitting_step, get_rcf_training_step, get_rcf_evaluation_step, get_rcf_register_step
     
     feature_selection_step = get_feature_selection_step(
         parameters,
@@ -166,6 +166,53 @@ def main(args):
         train_instance_type=train_instance_type
     )
     
+    # rcf_evaluation_step = get_rcf_evaluation_step(
+    #     parameters,
+    #     sagemaker_session,
+    #     role=role,
+    #     step_inputs=[
+    #         ProcessingInput(
+    #             source=rcf_data_splitting_step.properties.ProcessingOutputConfig.Outputs["data-splitting-output-val"].S3Output.S3Uri,
+    #             destination="/opt/ml/evaluation/val/",
+    #             input_name="validation-input",
+    #         )
+    #     ],
+    #     step_outputs=[
+    #         ProcessingOutput(
+    #             output_name="evaluation",
+    #             source="/opt/ml/processing/output",
+    #             destination=evaluation_output,
+    #         ),
+    #     ],
+    # )
+    
+    script_eval = ScriptProcessor(
+        image_uri=image_uri,
+        command=["python3"],
+        instance_type="ml.m5.xlarge",
+        instance_count=1,
+        base_job_name="script-abalone-eval",
+        role=role,
+        sagemaker_session=pipeline_session,
+    )
+    
+    eval_args = script_eval.run(
+        inputs=[
+            ProcessingInput(
+                source=step_train.properties.ModelArtifacts.S3ModelArtifacts,
+                destination="/opt/ml/processing/model",
+            ),
+            ProcessingInput(
+                source=step_process.properties.ProcessingOutputConfig.Outputs["test"].S3Output.S3Uri,
+                destination="/opt/ml/processing/test",
+            ),
+        ],
+        outputs=[
+            ProcessingOutput(output_name="evaluation", source="/opt/ml/processing/evaluation"),
+        ],
+        code="code/evaluation.py",
+    )
+    
     rcf_register_step = get_rcf_register_step(
         parameters,
         sagemaker_session,
@@ -186,6 +233,7 @@ def main(args):
         data_scaling_step,
         rcf_data_splitting_step,
         rcf_training_step,
+        rcf_evaluation_step
         rcf_register_step,
     ]
     

@@ -4,7 +4,8 @@ from sagemaker.workflow.pipeline_context import PipelineSession
 from sagemaker.inputs import TrainingInput
 from sagemaker.workflow.steps import TrainingStep
 from sagemaker import image_uris
-
+import sagemaker
+from sagemaker.workflow.steps import ProcessingStep
 
 def get_rcf_training_step(
     parameters, 
@@ -41,5 +42,5 @@ def get_rcf_training_step(
     )
     return TrainingStep(
         name=step_name,
-        step_args=train_step_args,
+        step_args=train_step_args
     )

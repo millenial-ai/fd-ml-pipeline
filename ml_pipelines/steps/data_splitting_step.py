@@ -11,6 +11,7 @@ def get_rcf_data_splitting_step(
     processing_instance_count,
     splitting_ratio,
     label_to_drop,
+    cache_config=None,
     step_name="RCF_DataSplitting",
     image_uri="683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3",
 ):
@@ -34,7 +35,8 @@ def get_rcf_data_splitting_step(
             "--label", label_to_drop,
             "--drop-train-label",
             "--drop-train-headers"
-        ]
+        ],
+        cache_config=cache_config
     )
     return data_splitting_step
     
@@ -48,6 +50,7 @@ def get_xgb_data_splitting_step(
     processing_instance_count,
     splitting_ratio,
     label_to_drop,
+    cache_config=None,
     step_name="XGB_DataSplitting",
     image_uri="683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3",
 ):
@@ -70,6 +73,7 @@ def get_xgb_data_splitting_step(
             "--test-split-ratio", splitting_ratio.to_string(),
             "--drop-train-headers",
             "--drop-val-headers"
-        ]
+        ],
+        cache_config=cache_config
     )
     return data_splitting_step

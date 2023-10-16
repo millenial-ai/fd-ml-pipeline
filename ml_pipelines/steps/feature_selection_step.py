@@ -11,6 +11,7 @@ def get_feature_selection_step(
     processing_instance_type,
     processing_instance_count,
     role,
+    cache_config=None,
     step_name="FeatureSelection",
     image_uri="683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3",
 ):
@@ -32,5 +33,6 @@ def get_feature_selection_step(
             '--output-data', '/opt/ml/processing/output/',
             '--selected-features', feature_list,
             '--selected-label', label
-        ]
+        ],
+        cache_config=cache_config
     )
