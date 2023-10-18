@@ -31,6 +31,7 @@ def get_data_scaling_step(
         job_arguments=[
             '--input-data', '/opt/ml/processing/input/', 
             '--output-data', '/opt/ml/processing/output/',
+            '--artifact-data', '/opt/ml/processing/artifact/',
             '--scalers', scalers
         ],
         cache_config=cache_config

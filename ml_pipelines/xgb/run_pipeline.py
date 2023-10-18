@@ -29,6 +29,7 @@ def calculate_parameters(parameters):
     parameters["feature_selection_data"] = os.path.join(prefix, "preprocessed_data", "feature_selection")
     parameters["feature_aggregation_data"] = os.path.join(prefix, "preprocessed_data", "feature_aggregation")
     parameters["std_scaling_data"] = os.path.join(prefix, "preprocessed_data", "std_scaling")
+    parameters["scaling_artifact"] = os.path.join(prefix, "preprocessed_data", "scaling_artifact")
     parameters["xgb_splitting_data_train"] = os.path.join(prefix, "preprocessed_data/splitting", "train")
     parameters["xgb_splitting_data_val"] = os.path.join(prefix, "preprocessed_data/splitting", "val")
     parameters["train_artifact_path"] = os.path.join(prefix, "training", "artifact")
@@ -155,6 +156,12 @@ def main(args):
                 source="/opt/ml/processing/output",
                 s3_upload_mode="EndOfJob",
                 destination=parameters.get("std_scaling_data"),
+            ),
+            ProcessingOutput(
+                output_name="data-standard-scaling-artifact",
+                source="/opt/ml/processing/artifact",
+                s3_upload_mode="EndOfJob",
+                destination=parameters.get("scaling_artifact"),
             )
         ],
         instance_type=processing_instance_type,

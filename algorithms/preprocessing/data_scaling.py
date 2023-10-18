@@ -9,6 +9,7 @@ import numpy as np
 import logging
 import importlib
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+import pickle
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -63,6 +64,12 @@ def parse_scalers_from_str(scaler_str: str) -> dict:
     logging.info(f"Parse scaler returns {scaler_mapping}")
     return scaler_mapping
     
+def dump_scaler(scaler, output_path):
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    output = open(output_path, 'wb+')
+    pickle.dump(scaler, output)
+    output.close()
+    logging.info(f"Dumping scaler {scaler} to {output_path}")
 
 """
 Input a list of files
@@ -104,6 +111,7 @@ def scale_data(
                 else:
                     transformed_data[column] = scaled_data[:,0]
                 
+                dump_scaler(scaler, os.path.join(args.artifact_data, f"{key}_{column}.pkl"))
         
         logging.info("Saving transformed data")
         # Save the selected data
@@ -113,6 +121,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--input-data", type=str, required=True, help="S3 URI of the input data")
     parser.add_argument("--output-data", type=str, required=True, help="S3 URI for output data")
+    parser.add_argument("--artifact-data", type=str, required=True, help="S3 URI for artifact data (scalers, encoders)")
     parser.add_argument("--scalers", type=str, help="""
         List of scalers and their respective colunns. The format is 
         Example: 'StandardScaler[col1,col2] LabelEncoder[col3,col4]'
