@@ -2,9 +2,10 @@
     "execution_role": "arn:aws:iam::348490654799:role/service-role/AmazonSageMaker-ExecutionRole-20230705T105457",
     "bucket_name": "s3://fd-ml-pipeline",
     
-    "input_data": "s3://fd-ml-pipeline/input_data",
-    "feature_list": "amt,lat,long,city_pop,merch_lat,merch_long,merchant,category,city,state,job,age,part_of_day",
-    "label": "is_fraud",
+    "input_data": "s3://fd-ml-pipeline/input-data-2",
+    "xgb_feature_list": "amt,lat,long,city_pop,merch_lat,merch_long,merchant,category,city,state,job,age,part_of_day",
+    "rcf_feature_list": "amt,lat,long,city_pop,merch_lat,merch_long",
+    "label": "rcf_isfraud",
     
     "splitting_ratio": 0.2,
     

@@ -10,6 +10,7 @@ import logging
 import importlib
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 import pickle
+import zipfile
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -113,6 +114,15 @@ def scale_data(
                 
                 dump_scaler(scaler, os.path.join(args.artifact_data, f"{key}_{column}.pkl"))
         
+        with zipfile.ZipFile(os.path.join(args.artifact_data, "all-scalers.zip"), 'w', zipfile.ZIP_DEFLATED) as zipf:
+            # Walk through the directory and add each file to the ZIP archive
+            for foldername, subfolders, filenames in os.walk(args.artifact_data):
+                for filename in filenames:
+                    file_path = os.path.join(foldername, filename)
+                    # You can specify a different name or path for the files in the ZIP archive
+                    # by modifying the second argument in write().
+                    zipf.write(file_path, os.path.relpath(file_path, args.artifact_data))
+
         logging.info("Saving transformed data")
         # Save the selected data
         transformed_data.to_csv(output_file, index=False)

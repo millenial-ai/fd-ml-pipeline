@@ -24,8 +24,11 @@ file_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, file_dir)
 sys.path.insert(0, PREFIX)
 
+from utils import create_dataset
+
 def calculate_parameters(parameters):
     prefix = os.path.join(parameters.get("bucket_name"), "xgb", parameters.get("pipeline_name"))
+    parameters["dataset_path"] = os.path.join(prefix, "dataset")
     parameters["feature_selection_data"] = os.path.join(prefix, "preprocessed_data", "feature_selection")
     parameters["feature_aggregation_data"] = os.path.join(prefix, "preprocessed_data", "feature_aggregation")
     parameters["std_scaling_data"] = os.path.join(prefix, "preprocessed_data", "std_scaling")
@@ -59,7 +62,7 @@ def main(args):
     role = ParameterString(name="ExecutionRole", default_value=parameters.get("execution_role"))
     
     # Define pipeline parameters
-    input_data = ParameterString(name="InputData", default_value=parameters.get("input_data"))
+    input_data = ParameterString(name="InputData", default_value=parameters.get("dataset_path"))
     
     feature_selection_data = ParameterString(name="FeatureSelectionData", default_value=parameters.get("feature_selection_data"))
     
@@ -83,7 +86,34 @@ def main(args):
         default_value="PendingManualApproval"
     )
     
+    # # Create dataset from feature group, and dump to s3 output path
+    # create_dataset(
+    #     feature_group_name = args.feature_group_name,
+    #     output_path = parameters.get("dataset_path")
+    # )
+    
     from steps import get_feature_selection_step, get_feature_aggregation_step, get_data_scaling_step, get_rcf_data_splitting_step, get_xgb_data_splitting_step, get_rcf_training_step, get_xgb_evaluation_step, get_rcf_register_step
+    sklearn_image_url = "683313688378.dkr.ecr.us-east-1.amazonaws.com/sagemaker-scikit-learn:1.2-1-cpu-py3"
+    sagemaker_image_url = "public.ecr.aws/sagemaker/sagemaker-distribution:latest-cpu"
+    
+    dataset_creation_step = ProcessingStep(
+        name="Dataset_Creation",
+        processor=sagemaker.processing.ScriptProcessor(
+            image_uri=sklearn_image_url,
+            command=["python3"],
+            instance_type=processing_instance_type,
+            instance_count=processing_instance_count,
+            role=role, 
+            sagemaker_session=sagemaker_session
+        ),
+        code="./algorithms/preprocessing/create_dataset.py",
+        job_arguments=[
+            '--feature-group-name', args.feature_group_name, 
+            '--dataset-path', parameters.get("dataset_path"),
+            '--region', sagemaker_session.boto_region_name,
+        ],
+        cache_config=cache_config
+    )
     
     feature_aggregation_step = get_feature_aggregation_step(
         parameters,
@@ -110,6 +140,7 @@ def main(args):
         cache_config=cache_config,
         step_name="XGB_FeatureAggregation"
     )
+    feature_aggregation_step.add_depends_on([dataset_creation_step])
     
     feature_selection_step = get_feature_selection_step(
         parameters,
@@ -299,11 +330,13 @@ def main(args):
     # Define the pipeline
     pipeline_name = "fd-pipeline-xgb"
     pipeline_steps = [
+        dataset_creation_step,
         feature_aggregation_step,
         feature_selection_step,
         data_scaling_step,
         xgb_data_splitting_step
     ] if args.local else [
+        dataset_creation_step,
         feature_aggregation_step,
         feature_selection_step,
         data_scaling_step,
@@ -338,6 +371,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--local", action="store_true", help="Run sagemaker local session")
     parser.add_argument("--pipeline-name", type=str, default=None, help="Name for the whole pipeline. This name would be used to specify s3 location")
+    parser.add_argument("--feature-group-name", type=str, default="transactions-dev", help="Name for the whole pipeline. This name would be used to specify s3 location")
     parser.add_argument("--use-cache", action="store_true", help="Cache sagemaker pipeline steps")
 
     args = parser.parse_args()

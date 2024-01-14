@@ -1,0 +1,20 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /home/ec2-user/artifact-installation
+permissions:
+  - object: /home/ec2-user/fd-worker
+    owner: ec2-user
+    group: ec2-user
+    mode: 755
+
+hooks:
+  AfterInstall :
+    - location: scripts/stop_app.sh
+      runas: ec2-user
+    - location: scripts/download_artifacts.sh
+      runas: ec2-user
+  ApplicationStart:
+    - location: scripts/start_app.sh
+      runas: ec2-user

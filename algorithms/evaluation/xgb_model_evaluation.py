@@ -35,15 +35,19 @@ if __name__ == "__main__":
     
     CLS_DICT = {} # Dict map from cls_{threshold} to value
     
-    prediction_threshold = 0.5    
     for test_path in glob.glob(TEST_DIR):
+        print("test_path", test_path)
         df = pd.read_csv(test_path, header=None, skiprows=1)
-        y_test = df.iloc[:, -1].to_numpy()
-        df.drop(df.columns[-1], axis=1, inplace=True)
+        y_test = df.iloc[:, 0].to_numpy()
+        df.drop(df.columns[0], axis=1, inplace=True)
     
         X_test = xgboost.DMatrix(df.values)
     
         predictions = model.predict(X_test)
+        
+        print("predictions", predictions.shape)
+        print("X_test", X_test)
+        print("y_test", y_test)
         
         TOTAL += y_test.shape[-1]
         mse = mean_squared_error(y_test, predictions)
@@ -60,13 +64,15 @@ if __name__ == "__main__":
                 "FN": 0,
                 "Precision": None,
                 "Recall": None,
-                "F1": None
+                "F1": None,
+                "Total": 0
             }
             result_dict = CLS_DICT[prediction_threshold]
             result_dict["TP"] += float(np.sum((y_test == 1) & (predictions >= prediction_threshold)))
             result_dict["TN"] += float(np.sum((y_test == 0) & (predictions < prediction_threshold)))
             result_dict["FP"] += float(np.sum((y_test == 0) & (predictions >= prediction_threshold)))
             result_dict["FN"] += float(np.sum((y_test == 1) & (predictions < prediction_threshold)))
+            result_dict["Total"] += y_test.shape[-1]
     
     for prediction_threshold in THRESHOLDS:
         result_dict = CLS_DICT[prediction_threshold]

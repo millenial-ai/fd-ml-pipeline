@@ -19,6 +19,7 @@ def select_features_by_columns(input_path, output_path, selected_features=[], se
         data = pd.read_csv(input_file)
         logging.info(data.columns)
         
+        # Add label to first column because by default, sagemaker XGB take the first column as label
         selected_columns = [] 
         if str(selected_label) != "None":
             selected_columns.append(selected_label)
@@ -27,7 +28,7 @@ def select_features_by_columns(input_path, output_path, selected_features=[], se
         selected_data = data[selected_columns]
     
         # Save the selected data
-        selected_data.to_csv(output_file, index=False)
+        selected_data.to_csv(output_file, index=False, header=not args.no_header)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -35,6 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--output-data", type=str, required=True, help="S3 URI for saving the selected data")
     parser.add_argument("--selected-features", type=str, required=True, help="Comma-separated list of selected features")
     parser.add_argument("--selected-label", type=str, required=True, help="Comma-separated list of selected features")
+    parser.add_argument("--no-header", action="store_true", help="Set to prevent dumping header to output file")
     
     args = parser.parse_args()
 
